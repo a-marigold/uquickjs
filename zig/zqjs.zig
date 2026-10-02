@@ -24,6 +24,9 @@ const HELP_TEXT =
     \\                 Default to 'O0'.
     \\                 Example: '-Dopt-lvl=O3' or '-Dopt-lvl=Oz'.
 ;
+
+// TODO: Throw out deinitialization, it is a CLI
+
 pub fn main(init: std.process.Init.Minimal) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -34,13 +37,14 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     const io = threaded.io();
 
-    // Intended to use empty slice for unbuffered i/o
-    var stderrWriter = std.Io.File.stderr().writer(io, &.{});
-    const stderr = &stderrWriter.interface;
+    // Empty slice for unbuffered io
+    var stderr = std.Io.File.stderr().writer(io, &.{});
+    const stderrWriter = &stderr.interface;
 
     var args = try init.args.iterateAllocator(arenaAllocator);
     defer args.deinit();
 
+    // TODO: it is useless when there is the first arg
     const exeDirPath = try std.process.executableDirPathAlloc(io, arenaAllocator);
 
     var zigBuildCmd = std.ArrayList([]const u8).empty;
@@ -50,7 +54,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (args.next()) |arg| {
         try zigBuildCmd.append(arenaAllocator, arg);
     } else {
-        _ = try stderr.vtable.drain(stderr, &.{HELP_TEXT}, 1);
+        std.debug.print("abc", .{});
+        _ = try stderrWriter.vtable.drain(stderrWriter, &.{HELP_TEXT}, 1);
 
         std.process.exit(1);
     }
